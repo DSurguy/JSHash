@@ -1,44 +1,17 @@
 function JSHash(Items, hashKey, hashFunction, byValue){
 	this.Props.hashKey = hashKey;
 	this.Props.hashFunction = hashFunction;
+	//handle empty construction
+	if( Items == undefined ){
+		Items = [];
+	}
 	//If there's only one item, convert it to an array to save code.
 	if( Items.constructor.name != "Array" ){
 		Items = [Items];
 	}
 	//start storing items based on key, and clone them so we don't have reference issues
 	for( var i=0; i<Items.length; i++ ){
-		var cloneObj;
-		//clone the object if we are adding by value
-		if( byValue ){
-			cloneObj = this.cloneItem(Items[i]);
-		}
-		else{
-			cloneObj = Items[i];
-		}
-
-		//find out where this item is going
-		if( cloneObj[this.Props.hashKey] == undefined ){
-			//We can't hash this item because it doesn't have a value for the hashKey, so store it in the unhashables
-			this.Props.unhashed.push(cloneObj);
-		}
-		else{
-			var index;
-			//see if we need to run a hash function
-			if( this.Props.hashFunction ){
-				//run the key through the hash function and convert the output to a string
-				index = this.Props.hashFunction(cloneObj[this.Props.hashKey]).toString();
-			}
-			else{
-				index = cloneObj[this.Props.hashKey].toString();
-			}
-			//insert the item into the hash
-			if( this[index] ){
-				this[index].push(cloneObj);
-			}
-			else{
-				this[index] = [cloneObj];
-			}
-		}
+		this.add(Items[i], byValue);
 	}
 };
 
@@ -77,7 +50,7 @@ JSHash.prototype.cloneItem = function (item) {
 *	
 *	Chainable: No
 */
-JSHash.prototype._get = function(key, flat, byValue){
+JSHash.prototype.get = function(key, flat, byValue){
 	if( this[key] == undefined || !this.hasOwnProperty(key) ){
 		//there's no objects at this key
 		return undefined;
@@ -117,7 +90,7 @@ JSHash.prototype._get = function(key, flat, byValue){
 *	
 *	Chainable: Yes
 */
-JSHash.prototype._set = function(key, value, byValue){
+JSHash.prototype.set = function(key, value, byValue){
 	var index, cloneObj;
 	//run the key through the hash function if we need to
 	if( this.Props.hashFunction ){
@@ -151,7 +124,7 @@ JSHash.prototype._set = function(key, value, byValue){
 *	
 *	Chainable: Yes
 */
-JSHash.prototype._add = function(value, byValue){
+JSHash.prototype.add = function(value, byValue){
 	var index, cloneObj;
 	//determine if we're adding by value or reference
 	if( byValue ){
@@ -161,7 +134,18 @@ JSHash.prototype._add = function(value, byValue){
 		cloneObj = value;
 	}
 
-	//determine if we can hash this item
+	//determine how we're hashing this item
+	if( (this.hashKey == undefined || this.hashKey == false) && this.hashFunction ){
+		//we're going to hash the entire object through some function
+		index = this.hashFunction(cloneObj).toString();
+		//now add it to the hash
+		if( this[index] ){
+			this[index].push(cloneObj);
+		}
+		else{
+			this[index] = [cloneObj];
+		}
+	}
 	if( cloneObj[this.Props.hashKey] == undefined ){
 		//We can't hash this item because it doesn't have a value for the hashKey, so store it in the unhashables
 		this.Props.unhashed.push(cloneObj);
@@ -178,7 +162,6 @@ JSHash.prototype._add = function(value, byValue){
 		if( this[index] ){
 			this[index].push(cloneObj);
 		}
-
 		else{
 			this[index] = [cloneObj];
 		}
@@ -224,7 +207,7 @@ JSHash.prototype.getKeys = function(isString, sortFunc){
 	var keys = [];
 	//get all keys out of the hash
 	for( item in this ){
-		if (this.hasOwnProperty(item) && !(item in this.Props) ){
+		if (this.hasOwnProperty(item) ){
 			keys.push(item);
 		}
 	}
@@ -242,4 +225,51 @@ JSHash.prototype.getKeys = function(isString, sortFunc){
 	else{
 		return keys;
 	}
+}
+
+/*
+*	Retrieve all objects in the hash as an array
+*	-Optional 'flat'
+*		If true, return the value at the last index of the array stored in each bucket
+*	-Optional 'byValue'
+*		If true, all objects are cloned before being returned
+*		If false, all objects are returned by reference
+*	-Optional 'sortFunc'
+*		If this is passed as a function, it will be used to sort the returned array
+*		If this is passed as true, the objects will be sorted by their hash
+*/
+JSHash.prototype.getValues = function(flat, byValue, sortFunc){
+	var items = [], keys = [];
+	if( sortFunc == true ){
+		//get the keys, sort them then get all the items
+		keys = this.getKeys(false, true);
+	}
+	else{
+		keys = this.getKeys();
+	}
+	for( var i=0; i<keys.length; i++ ){
+		//check if we need to return by value or reference
+		if( byValue ){
+			if( flat ){
+				items.push(this.cloneItem(this[keys[i]][this[keys[i]].length-1]));
+			}
+			else{
+				items.push(this.cloneItem(this[keys[i]]));
+			}
+		}
+		else{
+			if( flat ){
+				items.push(this[keys[i]][this[keys[i]].length-1]);
+			}
+			else{
+				items.push(this[keys[i]]);
+			}
+		}
+	}
+	//optionally sort the array
+	if( typeof sortFunc == "function" ){
+		items = items.sort(sortFunc);
+	}
+
+	return items;
 }
