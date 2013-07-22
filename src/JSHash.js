@@ -1,6 +1,7 @@
 function JSHash(Items, hashKey, hashFunction, byValue){
 	this.Props.hashKey = hashKey;
 	this.Props.hashFunction = hashFunction;
+	this.Props.unhashed = [];
 	//handle empty construction
 	if( Items == undefined ){
 		Items = [];
@@ -273,3 +274,5 @@ JSHash.prototype.getValues = function(flat, byValue, sortFunc){
 
 	return items;
 }
+
+module.exports = JSHash;
