@@ -30,13 +30,17 @@ JSHash.prototype.Props = {
 *	Utility function to clone an item by value instead of reference
 */
 JSHash.prototype.cloneItem = function (item) {
-    if( typeof item !== "object" && typeof item !== "function" && typeof item !== "undefined" ){
+    if( typeof item !== "object" && typeof item !== "function" && typeof item !== "undefined" && item != null ){
         //we cloned an object literal, it should have a valueOf function
         return item.valueOf();
     }
-    if( typeof item === "undefined" ){
+    if( typeof item === "undefined"){
         //we can't clone an undefined object, return undefined
         return undefined;
+    }
+    if( item == null ){
+    	//we can't clone null, so just return null
+    	return null;
     }
 	//preserve the classname of the item being cloned
 	var newObj = new item.constructor;
